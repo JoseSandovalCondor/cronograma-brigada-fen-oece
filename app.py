@@ -160,7 +160,7 @@ st.markdown("""
 col1, col2, col3 = st.columns([1, 3, 1])
 with col1:
     if os.path.exists(ruta_logo_oece):
-        st.image(ruta_logo_oece, width=120)
+        st.image(ruta_logo_oece, width=200)
     else:
         st.markdown("<div style='text-align:center; color:#6c757d; font-size:0.8rem;'>[Logo OECE]</div>", unsafe_allow_html=True)
 with col2:
