@@ -117,19 +117,16 @@ st.markdown(f"""
 # ==========================================
 # FUNCIÓN PARA CARGAR DATOS DE GOOGLE SHEETS
 # ==========================================
-@st.cache_data(ttl=60)  # Se actualiza cada 60 segundos
+@st.cache_data(ttl=60)
 def cargar_datos():
     try:
-        # Ruta del archivo de credenciales
-        ruta_credenciales = os.path.join("config", "credentials.json")
-        
-        if not os.path.exists(ruta_credenciales):
-            st.error("⚠️ No se encuentra el archivo `credentials.json` en la carpeta `config`.")
-            return pd.DataFrame()
+        # Leer credenciales desde los Secrets de Streamlit Cloud
+        import json
+        creds_dict = json.loads(st.secrets["gcp_service_account"])
         
         scope = ['https://spreadsheets.google.com/feeds',
                  'https://www.googleapis.com/auth/drive']
-        creds = ServiceAccountCredentials.from_json_keyfile_name(ruta_credenciales, scope)
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         
         # Abrir por ID específico y hoja específica
