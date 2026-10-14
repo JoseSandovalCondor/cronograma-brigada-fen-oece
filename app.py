@@ -1,10 +1,8 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import os
-import time
+import base64
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -17,7 +15,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# COLORES INSTITUCIONALES (Basado en el PDR)
+# COLORES INSTITUCIONALES
 # ==========================================
 COLORS = {
     'azul_marino': '#1a3a5c',
@@ -34,12 +32,10 @@ COLORS = {
 # ==========================================
 st.markdown(f"""
     <style>
-    /* Fondo general */
     .stApp {{
         background-color: {COLORS['gris_fondo']};
     }}
     
-    /* Encabezado Principal */
     .main-header {{
         background-color: {COLORS['azul_marino']};
         padding: 1.5rem 2rem;
@@ -57,18 +53,15 @@ st.markdown(f"""
     }}
     .header-title h1 {{
         margin: 0;
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 700;
-        letter-spacing: 1px;
     }}
     .header-title p {{
         margin: 5px 0 0 0;
-        font-size: 1.1rem;
+        font-size: 1.5rem;
         color: {COLORS['amarillo_quemado']};
-        font-weight: 500;
     }}
     
-    /* Tarjetas de Estadísticas */
     .stat-card {{
         background-color: {COLORS['blanco']};
         padding: 1.5rem;
@@ -76,10 +69,6 @@ st.markdown(f"""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         text-align: center;
         border-left: 5px solid {COLORS['azul_marino']};
-        transition: transform 0.2s;
-    }}
-    .stat-card:hover {{
-        transform: translateY(-3px);
     }}
     .stat-number {{
         font-size: 2.5rem;
@@ -91,10 +80,8 @@ st.markdown(f"""
         font-size: 1rem;
         color: {COLORS['gris_texto']};
         margin-top: 5px;
-        font-weight: 500;
     }}
     
-    /* Contenedor de Tabla */
     .table-container {{
         background-color: {COLORS['blanco']};
         padding: 1.5rem;
@@ -102,7 +89,6 @@ st.markdown(f"""
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }}
     
-    /* Footer */
     .footer {{
         text-align: right;
         color: {COLORS['gris_texto']};
@@ -115,61 +101,65 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# FUNCIÓN PARA CARGAR DATOS DE GOOGLE SHEETS
+# FUNCIÓN PARA CARGAR DATOS
 # ==========================================
 @st.cache_data(ttl=60)
 def cargar_datos():
     try:
-        # ID de tu Google Sheet
         sheet_id = "1w8KSXhfPdzJho_9k-pjodxdNm3oxZeh4RUQRrGxATjM"
-        
-        # URL pública para exportar como CSV (sin credenciales)
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=CRONOGRAMA"
-        
-        # Leer directamente con pandas
         df = pd.read_csv(url)
-        
         return df
-        
     except Exception as e:
         st.error(f"⚠️ Error al conectar con Google Sheets: {str(e)}")
         return pd.DataFrame()
 
 # ==========================================
-# ENCABEZADO CON LOGOS
+# RUTAS DE LOS LOGOS
 # ==========================================
 ruta_logo_oece = os.path.join("logos", "logo_oece.png")
-ruta_logo_fen = os.path.join("logos", "logo_fen.png")
-
-# Fallback por si los logos tienen extensión .jpg o no existen
 if not os.path.exists(ruta_logo_oece):
     ruta_logo_oece = os.path.join("logos", "logo_oece.jpg")
-if not os.path.exists(ruta_logo_fen):
-    ruta_logo_fen = os.path.join("logos", "logo_fen.jpg")
 
-st.markdown("""
+ruta_logo_fen = os.path.join("logos", "logo_fen.jpg")
+if not os.path.exists(ruta_logo_fen):
+    ruta_logo_fen = os.path.join("logos", "logo_fen.png")
+
+# ==========================================
+# ENCABEZADO CON LOGOS (VERSIÓN CORREGIDA)
+# ==========================================
+def obtener_base64_imagen(ruta):
+    if os.path.exists(ruta):
+        with open(ruta, "rb") as imagen_file:
+            return base64.b64encode(imagen_file.read()).decode()
+    return None
+
+# Generar base64 de las imágenes
+img_oece_b64 = obtener_base64_imagen(ruta_logo_oece)
+img_fen_b64 = obtener_base64_imagen(ruta_logo_fen)
+
+# Crear HTML con tamaños EXPLÍCITOS forzados
+if img_oece_b64:
+    html_oece = f'<img src="data:image/jpeg;base64,{img_oece_b64}" style="max-width: 215px; height: auto; max-height: 150px;" alt="OECE">'
+else:
+    html_oece = '<div style="width: 120px;"></div>'
+
+if img_fen_b64:
+    html_fen = f'<img src="data:image/jpeg;base64,{img_fen_b64}" style="max-width: 175px; height: auto; max-height: 150px;" alt="Brigada FEN">'
+else:
+    html_fen = '<div style="width: 100px;"></div>'
+
+# Renderizar encabezado
+st.markdown(f"""
     <div class="main-header">
+        <div style="flex-shrink: 0;">{html_oece}</div>
         <div class="header-title">
-            <h1>CRONOGRAMA BRIGADA FEN</h1>
-            <p>Organismo Especializado para las Contrataciones Públicas Eficientes</p>
+            <h1>CRONOGRAMA DE ACTIVIDADES DE LA BRIGADA FEN - OECE</h1>
+            <p>OECE - Organismo Especializado para las Contrataciones Públicas Eficientes</p>
         </div>
+        <div style="flex-shrink: 0;">{html_fen}</div>
     </div>
 """, unsafe_allow_html=True)
-
-# Insertar logos usando Streamlit (para asegurar que carguen bien)
-col1, col2, col3 = st.columns([1, 3, 1])
-with col1:
-    if os.path.exists(ruta_logo_oece):
-        st.image(ruta_logo_oece, width=200)
-    else:
-        st.markdown("<div style='text-align:center; color:#6c757d; font-size:0.8rem;'>[Logo OECE]</div>", unsafe_allow_html=True)
-with col2:
-    st.empty() # Espacio vacío para equilibrar
-with col3:
-    if os.path.exists(ruta_logo_fen):
-        st.image(ruta_logo_fen, width=120)
-    else:
-        st.markdown("<div style='text-align:center; color:#6c757d; font-size:0.8rem;'>[Logo FEN]</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -179,14 +169,8 @@ st.markdown("<br>", unsafe_allow_html=True)
 df = cargar_datos()
 
 if not df.empty:
-    # --- TARJETAS DE ESTADÍSTICAS ---
     total_actividades = len(df)
-    
-    # Identificar la columna de Estado (busca variaciones comunes como "Estado", "estado", etc.)
     col_estado = next((col for col in df.columns if "estado" in col.lower()), df.columns[-1])
-    
-    # Conteo de estados (Asumimos que "Completado", "Finalizado" o "Cerrado" son estados de éxito - Verde)
-    # El resto se considera En Progreso / Pendiente (Amarillo)
     completados = len(df[df[col_estado].astype(str).str.lower().str.contains("completad|finaliz|cerrad|ejecutad", na=False)])
     en_progreso = total_actividades - completados
 
@@ -204,7 +188,7 @@ if not df.empty:
         st.markdown(f"""
             <div class="stat-card" style="border-left-color: {COLORS['amarillo_quemado']};">
                 <p class="stat-number" style="color: {COLORS['amarillo_quemado']};">{en_progreso}</p>
-                <p class="stat-label">En Progreso / Pendientes</p>
+                <p class="stat-label">En Progreso</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -218,34 +202,22 @@ if not df.empty:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- TABLA DE CRONOGRAMA ---
     st.markdown('<div class="table-container">', unsafe_allow_html=True)
-    st.subheader("📅 Detalle de Actividades Programadas")
+    st.markdown('<h3 style="color: #1a3a5c; font-weight: 700; font-size: 1.3rem;">📅 Detalle de actividades programadas:</h3>', unsafe_allow_html=True)
     
-    # Mostrar la tabla de forma limpia y profesional
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        height=450
-    )
+    st.dataframe(df, use_container_width=True, hide_index=True, height=450)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- FOOTER Y ACTUALIZACIÓN ---
     ahora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
     st.markdown(f"""
         <div class="footer">
-            🔄 Última actualización de datos: {ahora} | Datos en tiempo real desde Google Sheets
+            🔄 Última actualización: {ahora}
         </div>
     """, unsafe_allow_html=True)
     
-    # Botón de actualización manual
     if st.button("🔄 Actualizar datos ahora", type="primary"):
         st.cache_data.clear()
         st.rerun()
 
 else:
-    st.warning("⚠️ No se pudieron cargar los datos. Verifica que:")
-    st.write("1. El archivo `credentials.json` esté en la carpeta raíz del proyecto.")
-    st.write("2. La hoja de cálculo se llame exactamente `CRONOGRAMA` (en mayúsculas).")
-    st.write("3. Hayas compartido la hoja con el correo de la cuenta de servicio con permisos de **Lector**.")
+    st.warning("️ No se pudieron cargar los datos.")
